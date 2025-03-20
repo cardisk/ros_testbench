@@ -1,0 +1,4 @@
+<launch>
+    <include file="$(find ros_testbench)/launch/cloud_generator.launch"/>
+    <include file="$(find ros_testbench)/launch/cloud_filter.launch"/>
+</launch>

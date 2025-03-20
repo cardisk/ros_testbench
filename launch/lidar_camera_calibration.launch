@@ -1,0 +1,5 @@
+<launch>
+    <arg name="stdout" default="screen"/>
+    <node pkg="tf" type="static_transform_publisher" name="sensor1_rot_tf" args="0 0 0 -1.57079632679 0 -1.57079632679 rotated_zed2i_left_camera_optical_frame zed2i_left_camera_optical_frame 10"/>
+    <node pkg="tf" type="static_transform_publisher" name="velo2cam_tf" args="-0.230505 0.0503074 -0.0485216 0.0307456 -0.0547746 -0.00143072 velodyne rotated_zed2i_left_camera_optical_frame 100"/>
+</launch>
