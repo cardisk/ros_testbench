@@ -12,27 +12,16 @@
 #include <pcl_ros/impl/transforms.hpp>
 
 // tf/tf2 Includes
-
-// TODO: Swap this includes to take the transformation 
-// as a tf::Transform instead of a tf2::Transform.
-
-// #include <tf/tf.h>
-// #include <tf/transform_datatypes.h>
-// #include <tf/transform_listener.h>
-
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
-#include <tf2/exceptions.h>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf/tf.h>
+#include <tf/transform_datatypes.h>
+#include <tf/transform_listener.h>
 
 // Custom stuff
 #include "Point.h"
 
 // Globals
 ros::Publisher publisher;
-std::unique_ptr<tf2_ros::Buffer> tfBuffer;
-std::unique_ptr<tf2_ros::TransformListener> tfListener;
+std::unique_ptr<tf::TransformListener> listener;
 
 void callback(const sensor_msgs::PointCloud2::ConstPtr& cloud)
 {
@@ -44,16 +33,17 @@ void callback(const sensor_msgs::PointCloud2::ConstPtr& cloud)
     pcl::fromPCLPointCloud2(temp_cloud, input_cloud);
 
     // Transformation from the TF-Tree
-    tf2::Stamped<tf2::Transform> temp_tf;
-    tf2::Transform lidar2cam;
+    tf::StampedTransform temp_tf;
+    tf::Transform lidar2cam;
 
     try {
-        geometry_msgs::TransformStamped tf_msg = tfBuffer->lookupTransform(
+        listener->lookupTransform(
             "zed2i_left_camera_optical_frame", 
             "velodyne", 
-            ros::Time(0)
+            ros::Time(0), 
+            temp_tf
         );
-        tf2::fromMsg(tf_msg, temp_tf);
+         
         lidar2cam.setBasis(temp_tf.getBasis());
         lidar2cam.setOrigin(temp_tf.getOrigin());
     } catch (tf2::TransformException &e) {
@@ -61,40 +51,10 @@ void callback(const sensor_msgs::PointCloud2::ConstPtr& cloud)
         return;
     }
 
-    // TODO: This code obtains a tf1 transformation from the TF-Tree
-    // to make it easy transforming clouds with libPCL.
-    // Unfortunately it errors out that the transformation required is
-    // ahead of time somehow and this is not possible.
-
-    // static tf::TransformListener listener;
-    // tf::StampedTransform temp_tf;
-    // tf::Transform lidar2cam;
-
-    // try {
-    //     // geometry_msgs::TransformStamped tf_msg = tfBuffer->lookupTransform(
-    //     //     "zed2i_left_camera_optical_frame", 
-    //     //     "velodyne", 
-    //     //     ros::Time(0)
-    //     // );
-    //     // tf2::fromMsg(tf_msg, temp_tf);
-    //     listener.lookupTransform(
-    //         "zed2i_left_camera_optical_frame", 
-    //         "velodyne", 
-    //         ros::Time(0), 
-    //         temp_tf
-    //     );
-         
-    //     lidar2cam.setBasis(temp_tf.getBasis());
-    //     lidar2cam.setOrigin(temp_tf.getOrigin());
-    // } catch (tf2::TransformException &e) {
-    //     ROS_ERROR("%s", e.what());
-    //     return;
-    // }
-
     pcl::PointCloud<Point> transformed_cloud;
 
-    // TODO: https://github.com/ros-perception/perception_pcl/issues/222
-    // pcl_ros::transformPointCloud(input_cloud, transformed_cloud, lidar2cam);
+    // PointCloud transformation
+    pcl_ros::transformPointCloud(input_cloud, transformed_cloud, lidar2cam);
 
     // Filtering
     pcl::PointCloud<Point> output_cloud;
@@ -117,8 +77,8 @@ int main (int argc, char** argv)
     ros::init(argc, argv, "cloud_transform_and_filter");
     ros::NodeHandle nh;
 
-    tfBuffer = std::make_unique<tf2_ros::Buffer>();
-    tfListener = std::make_unique<tf2_ros::TransformListener>(*tfBuffer);
+    // Creating a tf::TransformListener
+    listener = std::make_unique<tf::TransformListener>();
 
     // Subscribing to the cloud_generator topic
     ros::Subscriber sub = nh.subscribe("cloud_generator", 1, callback);
