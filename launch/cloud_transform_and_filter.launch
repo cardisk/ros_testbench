@@ -1,0 +1,3 @@
+<launch>
+    <node name="cloud_transform_and_filter" pkg="ros_testbench" type="ros_testbench_cloud_transform_and_filter" output="screen"></node>
+</launch>
