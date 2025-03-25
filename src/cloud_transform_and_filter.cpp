@@ -61,7 +61,7 @@ void callback(const sensor_msgs::PointCloud2::ConstPtr& cloud)
 
     for (auto p : transformed_cloud.points)
     {
-        if (p.x > 5 && p.x < 10 && p.y > 5 && p.y < 10)
+        if (p.ring >= 5 && p.ring <= 10)
             output_cloud.push_back(p);
     }
 

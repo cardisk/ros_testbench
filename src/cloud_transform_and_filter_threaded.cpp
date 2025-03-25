@@ -29,18 +29,17 @@
 ros::Publisher publisher;
 std::unique_ptr<tf::TransformListener> listener;
 
-pcl::PointCloud<Point> filter_task(int start, int end, pcl::PointCloud<Point> &cloud, Eigen::Affine3f lidar2cam)
+pcl::PointCloud<Point> filter_task(void *cloud, int start, int end, Eigen::Affine3f lidar2cam)
 {
+    pcl::PointCloud<Point> *input_cloud = static_cast<pcl::PointCloud<Point> *>(cloud);
     pcl::PointCloud<Point> output_cloud;
 
     for (int i = start; i < end; i++)
     {
-        Point transformed_point = pcl::transformPoint(cloud[i], lidar2cam);
+        Point transformed_point = pcl::transformPoint((*input_cloud)[i], lidar2cam);
 
-        if (transformed_point.x > 5 && transformed_point.x < 10 && transformed_point.y > 5 && transformed_point.y < 10)
-        {
+        if (transformed_point.ring >= 5 && transformed_point.ring <= 10)
             output_cloud.push_back(transformed_point);
-        }
     }
 
     return output_cloud;
@@ -79,7 +78,6 @@ void callback(const sensor_msgs::PointCloud2::ConstPtr& cloud)
     Eigen::Affine3f eigen_float_lidar2cam = eigen_double_lidar2cam.cast<float>();
 
     // Filtering
-    pcl::PointCloud<Point> output_cloud;
     std::vector<std::future<pcl::PointCloud<Point>>> threads;
 
     // Assuming 50_000 points per thread.
@@ -87,24 +85,45 @@ void callback(const sensor_msgs::PointCloud2::ConstPtr& cloud)
     int step_size = 50000;
     int offset = 0;
 
-    // TODO: Test if threads dies when the task is done.
-
-    // IMPORTANT: Pay attention to this answer because it says important things about std::future.
+    // IMPORTANT 1: Pay attention to this answer because it says important things about std::future.
     // https://stackoverflow.com/questions/30810305/confusion-about-threads-launched-by-stdasync-with-stdlaunchasync-parameter
     while (offset < len)
     {
         int end = (offset + step_size > len) ? len : offset + step_size;
 
         std::future<pcl::PointCloud<Point>> filter_thread = std::async(
-            &filter_task, 
+            std::launch::async,
+            filter_task, 
+            &input_cloud,
             offset, 
             end,
             eigen_float_lidar2cam
         );
 
-        threads.push_back(filter_thread);
+        // std::vector uses copy c'tor which is deleted from std::future, std::move solves the problem.
+        threads.push_back(std::move(filter_thread));
 
         offset += step_size;
+    }
+
+    // Concatenating the results
+    pcl::PointCloud<Point> output_cloud;
+
+    int running_tasks = threads.size();
+    int i = 0;
+
+    // IMPORTANT 2: With this type of filtering the point.time sorting is lost
+    // because it cannot be ensured that the various threads will end in the same
+    // order as they are spawned.
+    while (running_tasks != 0)
+    {
+        if (threads[i].valid())
+        {
+            output_cloud += threads[i].get();
+            running_tasks--;
+        }
+
+        i = (i + 1) % threads.size();
     }
 
     // Publishing filtered cloud
@@ -126,7 +145,7 @@ int main (int argc, char** argv)
     ros::Subscriber sub = nh.subscribe("cloud_generator", 1, callback);
 
     // Creating a publisher to publish the filtered PointCloud2
-    publisher = nh.advertise<sensor_msgs::PointCloud2>("cloud_transform_and_filter", 1);
+    publisher = nh.advertise<sensor_msgs::PointCloud2>("cloud_transform_and_filter_threaded", 1);
 
     ros::spin();
 

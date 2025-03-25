@@ -36,8 +36,8 @@ int main(int argc, char **argv)
         for (int i = 0; i < CLOUD_SIZE; i++)
         {
             Point p(
-                (1 + i) % RANGE, (2 + i) % RANGE, (3 + i) % RANGE, // x, y, z
-                0, 1, static_cast<float>(ros::Time::now().toSec()) // intensity, ring, time
+                (1 + i) % RANGE, (2 + i) % RANGE, (3 + i) % RANGE,               // x, y, z
+                0, (1 + i) % RANGE, static_cast<float>(ros::Time::now().toSec()) // intensity, ring, time
             );
 
             cloud.push_back(p);

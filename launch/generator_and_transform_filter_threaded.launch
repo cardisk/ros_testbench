@@ -1,0 +1,5 @@
+<launch>
+    <include file="$(find ros_testbench)/launch/lidar_camera_calibration.launch"/>
+    <include file="$(find ros_testbench)/launch/cloud_generator.launch"/>
+    <include file="$(find ros_testbench)/launch/cloud_transform_and_filter_threaded.launch"/>
+</launch>
