@@ -185,6 +185,17 @@ target_link_libraries(
   ${catkin_LIBRARIES}
 )
 
+# Cloud Transform and Filter JIT
+add_executable(
+  ${PROJECT_NAME}_cloud_transform_and_filter_jit
+  src/cloud_transform_and_filter_jit.cpp
+)
+
+target_link_libraries(
+  ${PROJECT_NAME}_cloud_transform_and_filter_jit
+  ${catkin_LIBRARIES}
+)
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use

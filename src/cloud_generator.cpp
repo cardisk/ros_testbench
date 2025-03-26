@@ -13,7 +13,7 @@
 
 // Our LiDAR (Velodyne VLP16 16 channels) generates ~30000 points/second.
 // ~600000 points/second is the value shown by the manufacturer site.
-#define CLOUD_SIZE 600000
+#define CLOUD_SIZE 30000
 #define RANGE 20
 
 int main(int argc, char **argv)
@@ -26,7 +26,7 @@ int main(int argc, char **argv)
     ros::Publisher publisher = nh.advertise<sensor_msgs::PointCloud2>("cloud_generator", 1);
 
     // To limit the spin frequency
-    // ros::Rate loop_rate(15);
+    ros::Rate loop_rate(15);
 
     // Custom spinner
     while (ros::ok())
@@ -49,7 +49,7 @@ int main(int argc, char **argv)
 
         ros::spinOnce();
 
-        // loop_rate.sleep();
+        loop_rate.sleep();
     }
 
     return 0;
